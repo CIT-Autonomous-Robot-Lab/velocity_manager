@@ -1,0 +1,14 @@
+# Equivalent to requirement.txt nested inputs list.
+# ROS 2 params use parallel arrays; order = /vel_mng/switch rotation order.
+velocity_manager:
+  ros__parameters:
+    output_topic: "cmd_vel"
+    default_input: "navigation"
+    input_names:
+      - "navigation"
+      - "joystick"
+      - "keyboard"
+    input_topics:
+      - "/nav/cmd_vel"
+      - "/joy/cmd_vel"
+      - "/key/cmd_vel"

@@ -17,6 +17,13 @@ source install/setup.bash
 ros2 launch velocity_manager velocity_manager.launch.py
 ```
 
+## Topics (publish)
+
+| Topic | Type | Behavior |
+|---|---|---|
+| `cmd_vel` (configurable) | `geometry_msgs/msg/Twist` | 選択中ソースのパススルー、または停止時のゼロ指令 |
+| `/vel_mng/enabled` | `std_msgs/msg/Bool` | `true`=enable / `false`=disable。起動時と状態変化時に配信（transient_local） |
+
 ## Services
 
 | Service | Type | Behavior |

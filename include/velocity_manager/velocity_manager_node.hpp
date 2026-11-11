@@ -8,6 +8,7 @@
 
 #include <geometry_msgs/msg/twist.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <std_msgs/msg/bool.hpp>
 #include <std_srvs/srv/set_bool.hpp>
 #include <std_srvs/srv/trigger.hpp>
 
@@ -42,6 +43,7 @@ private:
     std::shared_ptr<std_srvs::srv::SetBool::Response> response);
 
   void publishZeroTwist();
+  void publishEnabledState();
 
   std::string output_topic_;
   std::string default_input_;
@@ -50,6 +52,7 @@ private:
   bool enabled_{false};
 
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr output_pub_;
+  rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr enabled_pub_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr switch_srv_;
   rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr enable_srv_;
 };

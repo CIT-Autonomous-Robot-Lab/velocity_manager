@@ -14,22 +14,36 @@ from pathlib import Path
 import rclpy
 from geometry_msgs.msg import Twist
 from rclpy.node import Node
+from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
+from std_msgs.msg import Bool
 from std_srvs.srv import SetBool, Trigger
 
 
 ROOT = Path(__file__).resolve().parents[3]  # test_ws
+
+ENABLED_QOS = QoSProfile(
+    history=HistoryPolicy.KEEP_LAST,
+    depth=10,
+    reliability=ReliabilityPolicy.RELIABLE,
+    durability=DurabilityPolicy.TRANSIENT_LOCAL,
+)
 
 
 class Tester(Node):
     def __init__(self) -> None:
         super().__init__('velocity_manager_smoke_tester')
         self.msgs: list[Twist] = []
+        self.enabled_msgs: list[Bool] = []
         self.create_subscription(Twist, 'cmd_vel', self._on_cmd, 10)
+        self.create_subscription(Bool, '/vel_mng/enabled', self._on_enabled, ENABLED_QOS)
         self.switch_cli = self.create_client(Trigger, '/vel_mng/switch')
         self.enable_cli = self.create_client(SetBool, '/vel_mng/enable')
 
     def _on_cmd(self, msg: Twist) -> None:
         self.msgs.append(msg)
+
+    def _on_enabled(self, msg: Bool) -> None:
+        self.enabled_msgs.append(msg)
 
     def spin_for(self, seconds: float) -> None:
         end = time.time() + seconds
@@ -140,6 +154,16 @@ def main() -> int:
         tester.wait_publisher()
         tester.spin_for(0.5)
 
+        print('=== Case 0: enabled topic initial state ===')
+        end = time.time() + 3.0
+        while time.time() < end and not tester.enabled_msgs:
+            tester.spin_for(0.05)
+        if not tester.enabled_msgs:
+            fail('expected initial /vel_mng/enabled message')
+        if tester.enabled_msgs[-1].data:
+            fail('initial enabled state should be false')
+        pass_('initial /vel_mng/enabled is false')
+
         print('=== Case 1: disabled blocks output ===')
         tester.msgs.clear()
         tester.publish_input('/nav/cmd_vel', 1.0)
@@ -160,9 +184,14 @@ def main() -> int:
         pass_('disable publishes zero Twist')
 
         print('=== Case 3: enable true + selected source passthrough ===')
+        tester.enabled_msgs.clear()
         res = tester.call_enable(True)
         if not res.success:
             fail(f'enable true failed: {res}')
+        tester.spin_for(0.3)
+        if not tester.enabled_msgs or not tester.enabled_msgs[-1].data:
+            fail('expected /vel_mng/enabled true after enable')
+        pass_('/vel_mng/enabled becomes true')
         tester.msgs.clear()
         tester.publish_input('/nav/cmd_vel', 1.5)
         tester.spin_for(0.3)
@@ -198,8 +227,12 @@ def main() -> int:
         pass_('switch wraps around')
 
         print('=== Case 6: switch while disabled does not resume output ===')
+        tester.enabled_msgs.clear()
         tester.call_enable(False)
         tester.spin_for(0.2)
+        if not tester.enabled_msgs or tester.enabled_msgs[-1].data:
+            fail('expected /vel_mng/enabled false after disable')
+        pass_('/vel_mng/enabled becomes false')
         tester.msgs.clear()
         res = tester.call_switch()
         if 'joystick' not in res.message:

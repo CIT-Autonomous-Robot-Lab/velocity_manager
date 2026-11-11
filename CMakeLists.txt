@@ -8,6 +8,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 
 include_directories(include)
@@ -19,6 +20,7 @@ add_executable(velocity_manager_node
 ament_target_dependencies(velocity_manager_node
   rclcpp
   geometry_msgs
+  std_msgs
   std_srvs
 )
 

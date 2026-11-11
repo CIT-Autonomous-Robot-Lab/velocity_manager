@@ -84,6 +84,11 @@ void VelocityManagerNode::setupInterfaces()
 {
   output_pub_ = create_publisher<geometry_msgs::msg::Twist>(output_topic_, 10);
 
+  // Latched-like status so late subscribers receive the latest enable state.
+  const auto enabled_qos = rclcpp::QoS(10).transient_local();
+  enabled_pub_ = create_publisher<std_msgs::msg::Bool>("/vel_mng/enabled", enabled_qos);
+  publishEnabledState();
+
   for (std::size_t i = 0; i < inputs_.size(); ++i) {
     inputs_[i].subscription = create_subscription<geometry_msgs::msg::Twist>(
       inputs_[i].topic, 10,
@@ -142,6 +147,7 @@ void VelocityManagerNode::handleEnable(
   if (!request->data) {
     enabled_ = false;
     publishZeroTwist();
+    publishEnabledState();
     response->success = true;
     response->message = "disabled";
     RCLCPP_INFO(
@@ -151,6 +157,7 @@ void VelocityManagerNode::handleEnable(
   }
 
   enabled_ = true;
+  publishEnabledState();
   response->success = true;
   response->message = "enabled:" + inputs_[current_index_].name;
   RCLCPP_INFO(
@@ -162,6 +169,13 @@ void VelocityManagerNode::publishZeroTwist()
 {
   geometry_msgs::msg::Twist zero;
   output_pub_->publish(zero);
+}
+
+void VelocityManagerNode::publishEnabledState()
+{
+  std_msgs::msg::Bool msg;
+  msg.data = enabled_;
+  enabled_pub_->publish(msg);
 }
 
 }  // namespace velocity_manager
